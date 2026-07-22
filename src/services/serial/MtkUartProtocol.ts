@@ -95,7 +95,8 @@ export class MtkUartProtocol {
 
   private async bootromHandshake(): Promise<void> {
     const deadline = Date.now() + 15000
-    await this.serial.drainInput(20)
+    // Fully discard any stale data in both the internal buffer and the input pipe
+    await this.serial.discardAll()
     let i = 0
     while (i < BROM_HANDSHAKE.length) {
       if (Date.now() > deadline) {
@@ -104,7 +105,7 @@ export class MtkUartProtocol {
       const tx = BROM_HANDSHAKE[i]
       await this.serial.write(new Uint8Array([tx]))
       try {
-        const rx = await this.serial.readExact(1, 10)
+        const rx = await this.serial.readExact(1, 100)
         const expected = (~tx) & 0xff
         if (rx[0] === expected) {
           i += 1
@@ -112,7 +113,10 @@ export class MtkUartProtocol {
         }
         i = 0
       } catch {
-        // keep trying
+        // No response from BootROM — pause briefly before retrying
+        // to avoid flooding the device with back-to-back writes
+        i = 0
+        await sleep(50)
       }
     }
 

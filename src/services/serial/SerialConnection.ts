@@ -199,6 +199,16 @@ export class SerialConnection {
     }
   }
 
+  /** Discard all buffered and pending serial data */
+  async discardAll(): Promise<void> {
+    this.unreadBuffer = new Uint8Array(0)
+    try {
+      await this.drainInput(30)
+    } catch {
+      // no-op
+    }
+  }
+
   async close(): Promise<void> {
     if (this.reader) {
       await this.reader.cancel().catch(() => undefined)
