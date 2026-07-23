@@ -8,6 +8,7 @@ import {
   GITHUB_BOOTLOADER_URL,
   GITHUB_PROJECT_URL,
   EEPROM_TOOL_URL,
+  BINSKETCH_URL,
 } from './constants'
 import type { Chip, DdrType, SerialDataBits, SerialParity, SerialStopBits } from './types'
 import { toNumber } from './utils/common'
@@ -224,6 +225,14 @@ function App() {
             rel="noopener noreferrer"
           >
             {t('navEepromTool')}
+          </a>
+          <a
+            className="nav-link"
+            href={BINSKETCH_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {t('navBinsketch')}
           </a>
           <div className="lang-switch">
             <label htmlFor="lang">{t('language')}</label>
