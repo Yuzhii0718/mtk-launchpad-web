@@ -340,17 +340,25 @@ input[type="text"] {
 
 input[type="number"] {
   font-family: "DM Mono", monospace;
+  font-size: 14px;
+  padding: 9px 12px;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+  -moz-appearance: textfield;
+  appearance: textfield;
 }
 
-/* hide number input spinners for cleaner binsketch look */
+/* hide number input spinners for cleaner look */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
-}
-input[type="number"] {
-  -moz-appearance: textfield;
-  appearance: textfield;
 }
 
 select {
@@ -1023,11 +1031,23 @@ input[type="file"]::file-selector-button:hover {
   font-weight: 500;
 }
 
-/* Release API input — monospace for URLs */
+/* Release API input — monospace for URLs, same surface as other inputs */
 .release-api-input {
   font-family: "DM Mono", monospace !important;
   font-size: 13px !important;
-  background: var(--surface2) !important;
+  padding: 9px 12px;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+}
+.release-api-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(91, 106, 240, 0.12);
 }
 .release-api-input::placeholder {
   font-family: "DM Sans", sans-serif;

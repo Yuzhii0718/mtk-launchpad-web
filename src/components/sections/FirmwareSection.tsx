@@ -133,7 +133,7 @@ function Bl2Panel(props: FirmwareSectionProps) {
             <div className="input-group">
               <div className="form-group">
                 <label>{t('bl2ReleaseApi')}</label>
-                <input className="release-api-input" value={bl2ReleaseApi} onChange={(event) => onBl2ReleaseApiChange(event.target.value)} placeholder="https://api.github.com/repos/..." />
+                <input type="text" className="release-api-input" value={bl2ReleaseApi} onChange={(event) => onBl2ReleaseApiChange(event.target.value)} placeholder="https://api.github.com/repos/..." />
               </div>
               <button type="button" className="btn btn-primary btn-sm" onClick={() => void onFetchBl2Release()} disabled={isLoadingBl2Release} style={{ flexShrink: 0 }}>
                 {t('fetchBl2Release')}
@@ -259,7 +259,7 @@ function FipPanel(props: FirmwareSectionProps) {
             <div className="input-group">
               <div className="form-group">
                 <label>{t('fipReleaseApi')}</label>
-                <input className="release-api-input" value={fipReleaseApi} onChange={(event) => onFipReleaseApiChange(event.target.value)} placeholder="https://api.github.com/repos/..." />
+                <input type="text" className="release-api-input" value={fipReleaseApi} onChange={(event) => onFipReleaseApiChange(event.target.value)} placeholder="https://api.github.com/repos/..." />
               </div>
               <button type="button" className="btn btn-primary btn-sm" onClick={() => void onFetchFipRelease()} disabled={isLoadingFipRelease} style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>
                 {t('fetchFipRelease')}
@@ -267,7 +267,7 @@ function FipPanel(props: FirmwareSectionProps) {
             </div>
             <div className="form-group">
               <label>{t('boardFilter')}</label>
-              <input value={boardFilter} onChange={(event) => onBoardFilterChange(event.target.value)} placeholder={t('boardFilterPlaceholder')} />
+              <input type="text" value={boardFilter} onChange={(event) => onBoardFilterChange(event.target.value)} placeholder={t('boardFilterPlaceholder')} />
             </div>
             <div className="release-tag">
               <span className={`tag-dot${fipReleaseTag ? '' : ' pending'}`} />
