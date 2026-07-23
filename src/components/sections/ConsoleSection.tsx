@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState, forwardRef } from 'react'
 import type { KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { LogEntry } from '../../types'
@@ -43,7 +43,7 @@ type ConsoleSectionProps = {
   onPostFlashActionChange: (value: PostFlashAction) => void
 }
 
-export function ConsoleSection(props: ConsoleSectionProps) {
+export const ConsoleSection = forwardRef<HTMLElement, ConsoleSectionProps>(function ConsoleSection(props, ref) {
   const { t } = useTranslation()
   const {
     isConnected,
@@ -87,6 +87,38 @@ export function ConsoleSection(props: ConsoleSectionProps) {
   const logsContainerRef = useRef<HTMLDivElement | null>(null)
   const terminalContainerRef = useRef<HTMLDivElement | null>(null)
 
+  const [isExpanded, setIsExpanded] = useState(false)
+  const [isEntering, setIsEntering] = useState(false)
+  const [isCollapsing, setIsCollapsing] = useState(false)
+  const [isFadingBack, setIsFadingBack] = useState(false)
+
+  // Expand entry: render at invisible state, then RAF kicks in the transition
+  const handleToggleExpand = useCallback(() => {
+    if (isExpanded) {
+      setIsCollapsing(true)
+    } else {
+      setIsExpanded(true)
+      setIsEntering(true)
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsEntering(false)
+        })
+      })
+    }
+  }, [isExpanded])
+
+  // Collapse exit transition finished → move card back to flow (invisible), then fade in
+  const handleTransitionEnd = useCallback((e: React.TransitionEvent) => {
+    if (e.propertyName === 'opacity' && isCollapsing) {
+      setIsCollapsing(false)
+      setIsExpanded(false)
+      setIsFadingBack(true)
+      requestAnimationFrame(() => {
+        setIsFadingBack(false)
+      })
+    }
+  }, [isCollapsing])
+
   const handleLogsScroll = useCallback(() => {
     if (!logsContainerRef.current) return
     const { scrollTop, scrollHeight, clientHeight } = logsContainerRef.current
@@ -120,8 +152,18 @@ export function ConsoleSection(props: ConsoleSectionProps) {
     }
   }, [])
 
+  // Build expanded class: entering → init state, expanded → target, collapsing → exit
+  const expandedClass = isExpanded
+    ? (isCollapsing ? ' console-collapsing' : (isEntering ? ' console-expanded console-entering' : ' console-expanded'))
+    : ''
+
   return (
-    <section className="card">
+    <section
+      className={`card${expandedClass}`}
+      ref={ref}
+      onTransitionEnd={handleTransitionEnd}
+      style={isFadingBack ? { opacity: 0 } : undefined}
+    >
       <div className="card-header">
         <div className="card-icon blue">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -130,6 +172,24 @@ export function ConsoleSection(props: ConsoleSectionProps) {
           </svg>
         </div>
         <h2>{t('logs')}</h2>
+        <button
+          type="button"
+          className="btn btn-sm console-expand-btn"
+          onClick={handleToggleExpand}
+          title={isExpanded ? t('collapse') : t('expand')}
+          style={{
+            marginLeft: 'auto',
+            background: 'var(--surface2)',
+            border: '1px solid var(--border2)',
+            color: 'var(--ink2)',
+            fontSize: '12px',
+            padding: '4px 10px',
+            borderRadius: 'var(--radius-sm)',
+            cursor: 'pointer',
+          }}
+        >
+          {isExpanded ? '⊠' : '⊞'}
+        </button>
       </div>
 
       <div className="button-row workflow-action-row">
@@ -328,4 +388,4 @@ export function ConsoleSection(props: ConsoleSectionProps) {
       )}
     </section>
   )
-}
+})

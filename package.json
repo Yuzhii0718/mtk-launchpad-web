@@ -1,7 +1,7 @@
 {
   "name": "mtk-launchpad-web",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.3.1",
   "author": "Yuzhii",
   "description": "A web-based tool for flashing firmware to MediaTek APSOC devices.",
   "type": "module",

@@ -87,7 +87,7 @@ export function ConnectionSection(props: ConnectionSectionProps) {
           <div className="form-group">
             <label>{t('detectedPort')}</label>
             <div className="info-chip">
-              <span className="info-value" style={{ fontFamily: '"DM Mono", "Fira Code", monospace' }}>{detectedPortInfo}</span>
+              <span className="info-value">{detectedPortInfo}</span>
             </div>
           </div>
           <div className="form-group">

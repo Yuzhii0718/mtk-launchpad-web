@@ -111,6 +111,7 @@ function App() {
 
   const terminalActionsRef = useRef<SerialTerminalActions | null>(null)
   const [postFlashAction, setPostFlashAction] = useState<PostFlashAction>('console')
+  const consoleSectionRef = useRef<HTMLElement | null>(null)
 
   const {
     connectionRef,
@@ -185,6 +186,12 @@ function App() {
       terminalActionsRef.current = null
     }
   }, [setActiveConsoleTab, startTerminalSession, stopTerminalSession, handleInterruptIntoUboot, handleInterruptIntoFailsafe, postFlashAction])
+
+  useEffect(() => {
+    if (isRunning && consoleSectionRef.current) {
+      consoleSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [isRunning])
 
   const ddrOptions = DDR_OPTIONS_BY_CHIP[chip]
 
@@ -343,6 +350,7 @@ function App() {
       />
 
       <ConsoleSection
+        ref={consoleSectionRef}
         isConnected={isConnected}
         isRunning={isRunning}
         isTerminating={isTerminating}
