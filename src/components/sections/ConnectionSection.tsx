@@ -37,7 +37,6 @@ export function ConnectionSection(props: ConnectionSectionProps) {
   const { t } = useTranslation()
   const {
     detectedPortInfo,
-    connectBaudRate,
     connectBaudRateOption,
     customConnectBaudRate,
     connectDataBits,

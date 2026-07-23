@@ -77,7 +77,6 @@ export const ConsoleSection = forwardRef<HTMLElement, ConsoleSectionProps>(funct
     onTerminalShowTimestampChange,
     onTerminalShowControlCharsChange,
     onSendTerminalInput,
-    onSendTerminalSpecialKey,
     onPostFlashActionChange,
   } = props
 
