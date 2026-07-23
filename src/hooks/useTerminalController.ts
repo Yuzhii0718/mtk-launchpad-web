@@ -381,7 +381,7 @@ export function useTerminalController(input: UseTerminalControllerParams) {
       if (!payload.length) {
         return
       }
-      appendTerminalOutput(`\n> ${visualizeControlChars(payload)}\n`)
+      appendTerminalOutput(`\n> ${raw}\n`)
       await connection.write(new TextEncoder().encode(payload))
       setTerminalInput('')
     } catch (error) {

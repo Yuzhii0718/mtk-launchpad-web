@@ -2,7 +2,7 @@ export type TerminalScreenState = {
   lines: string[]
   cursorRow: number
   cursorCol: number
-  parserMode: 'normal' | 'esc' | 'csi'
+  parserMode: 'normal' | 'esc' | 'csi' | 'osc' | 'osc_st' | 'esc_param'
   csiBuffer: string
   maxLines: number
 }
@@ -43,8 +43,47 @@ export function applyTerminalChunk(state: TerminalScreenState, chunk: string): s
         state.csiBuffer = ''
         continue
       }
+      // OSC: ESC ] ... BEL  or ESC ] ... ESC \
+      if (char === ']') {
+        state.parserMode = 'osc'
+        state.csiBuffer = ''
+        continue
+      }
+      // Two-char ESC sequences: ESC ( B, ESC ) 0, ESC * B, ESC + B, ESC # 8, etc.
+      // The next char is a parameter — consume it without output.
+      if (' #$%&()*+,-./'.includes(char)) {
+        state.parserMode = 'esc_param'
+        continue
+      }
+      // All other ESC sequences: just ignore (ESC 7, ESC 8, ESC D, ESC M, etc.)
       state.parserMode = 'normal'
-      applyNormalChar(state, char)
+      continue
+    }
+
+    // Consume the parameter byte of a two-char ESC sequence like ESC ( B
+    if (state.parserMode === 'esc_param') {
+      state.parserMode = 'normal'
+      continue
+    }
+
+    // OSC: accumulate until BEL or ST (ESC \)
+    if (state.parserMode === 'osc') {
+      if (char === '\u0007') {  // BEL — end of OSC
+        state.parserMode = 'normal'
+        continue
+      }
+      if (char === '\u001b') {  // ESC — start of ST (ESC \)
+        state.parserMode = 'osc_st'
+        continue
+      }
+      // ignore other OSC content
+      continue
+    }
+
+    // ST terminator for OSC (ESC \) — consume the final backslash
+    if (state.parserMode === 'osc_st') {
+      // char should be '\', but consume regardless
+      state.parserMode = 'normal'
       continue
     }
 
