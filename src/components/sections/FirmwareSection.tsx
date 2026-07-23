@@ -57,39 +57,23 @@ type FirmwareSectionProps = {
   onRunFipMd5Check: () => Promise<void>
 }
 
-export function FirmwareSection(props: FirmwareSectionProps) {
+function Bl2Panel(props: FirmwareSectionProps) {
   const { t } = useTranslation()
   const {
-    loadMode,
     bl2Source,
-    fipSource,
     bl2ReleaseApi,
     bl2ReleaseTag,
     isLoadingBl2Release,
-    fipReleaseApi,
-    fipReleaseTag,
-    isLoadingFipRelease,
-    boardFilter,
     builtinBl2Options,
     releaseBl2Options,
-    releaseFipOptions,
     selectedBuiltinBl2Key,
     selectedReleaseBl2Key,
     selectedExecutionRemoteBl2Candidate,
-    selectedReleaseFipKey,
-    selectedExecutionRemoteFipCandidate,
     canDownloadRambootPreloader,
     canUseRemoteBl2ForExecution,
-    canDownloadBoardBl2,
-    canDownloadFip,
-    canUseRemoteFipForExecution,
     bl2ExpectedMd5,
     bl2ActualMd5,
     bl2Md5Passed,
-    fipExpectedMd5,
-    fipActualMd5,
-    fipMd5Passed,
-    onLoadModeChange,
     onBl2SourceChange,
     onBl2ReleaseApiChange,
     onFetchBl2Release,
@@ -99,6 +83,145 @@ export function FirmwareSection(props: FirmwareSectionProps) {
     onDownloadRambootPreloader,
     onUploadedBl2FileChange,
     onRunBl2Md5Check,
+  } = props
+
+  return (
+    <>
+      <div className="tab-bar" style={{ maxWidth: '400px' }}>
+        <button
+          type="button"
+          className={bl2Source === 'builtin' ? 'active' : ''}
+          onClick={() => onBl2SourceChange('builtin')}
+        >
+          {t('builtin')}
+        </button>
+        <button
+          type="button"
+          className={bl2Source === 'github-release' ? 'active' : ''}
+          onClick={() => onBl2SourceChange('github-release')}
+        >
+          {t('githubRelease')}
+        </button>
+        <button
+          type="button"
+          className={bl2Source === 'upload' ? 'active' : ''}
+          onClick={() => onBl2SourceChange('upload')}
+        >
+          {t('uploadLocal')}
+        </button>
+      </div>
+
+      {bl2Source === 'builtin' && (
+        <div className="form-group">
+          <label>{t('chooseBl2')}</label>
+          <select
+            value={selectedBuiltinBl2Key}
+            onChange={(event) => onSelectedBuiltinBl2KeyChange(event.target.value)}
+          >
+            {builtinBl2Options.map((candidate) => (
+              <option key={candidateKey(candidate)} value={candidateKey(candidate)}>
+                {formatCandidateLabel(candidate)}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {bl2Source === 'github-release' && (
+        <>
+          <div className="release-api-section">
+            <div className="input-group">
+              <div className="form-group">
+                <label>{t('bl2ReleaseApi')}</label>
+                <input className="release-api-input" value={bl2ReleaseApi} onChange={(event) => onBl2ReleaseApiChange(event.target.value)} placeholder="https://api.github.com/repos/..." />
+              </div>
+              <button type="button" className="btn btn-primary btn-sm" onClick={() => void onFetchBl2Release()} disabled={isLoadingBl2Release} style={{ flexShrink: 0 }}>
+                {t('fetchBl2Release')}
+              </button>
+            </div>
+            <div className="release-tag">
+              <span className={`tag-dot${bl2ReleaseTag ? '' : ' pending'}`} />
+              <span className="tag-label">{t('releaseTag')}</span>
+              <span className="tag-value">{bl2ReleaseTag}</span>
+            </div>
+          </div>
+          <div className="form-group">
+            <label>{t('chooseBl2')}</label>
+            <select
+              value={selectedReleaseBl2Key}
+              onChange={(event) => onSelectedReleaseBl2KeyChange(event.target.value)}
+            >
+              {releaseBl2Options.map((candidate) => (
+                <option key={candidateKey(candidate)} value={candidateKey(candidate)}>
+                  {formatCandidateLabel(candidate)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="button-row" style={{ marginTop: '12px' }}>
+            <button type="button" className="btn btn-primary" onClick={() => void onUseRemoteBl2ForExecution()} disabled={!canUseRemoteBl2ForExecution}>
+              {t('useRemoteBl2ForRun')}
+            </button>
+            <button type="button" className="btn btn-secondary" onClick={() => void onDownloadRambootPreloader()} disabled={!canDownloadRambootPreloader}>
+              {t('downloadRambootPreloaderToLocal')}
+            </button>
+          </div>
+          {!selectedExecutionRemoteBl2Candidate && <p style={{ fontSize: '12px', color: 'var(--amber)', marginTop: '8px' }}>{t('remoteBl2NotSelectedForRun')}</p>}
+          {selectedExecutionRemoteBl2Candidate && (
+            <p style={{ fontSize: '12px', color: 'var(--ink3)', marginTop: '8px' }}>{t('remoteBl2InUse')}: {selectedExecutionRemoteBl2Candidate.fileName}</p>
+          )}
+          {!canDownloadRambootPreloader && <p style={{ fontSize: '12px', color: 'var(--amber)', marginTop: '4px' }}>{t('noSelectedBl2DownloadHint')}</p>}
+          <p style={{ fontSize: '12px', color: 'var(--ink3)', marginTop: '4px' }}>{t('downloadUsesBrowserHint')}</p>
+        </>
+      )}
+
+      {bl2Source === 'upload' && (
+        <div className="form-group">
+          <label>{t('uploadLocal')}</label>
+          <input
+            type="file"
+            onChange={(event) => onUploadedBl2FileChange(event.target.files?.[0] ?? null)}
+            accept=".bin,.img"
+          />
+        </div>
+      )}
+
+      <div className="md5-verify-section">
+        <div className="button-row">
+          <button type="button" className="btn btn-secondary" onClick={() => void onRunBl2Md5Check()}>
+            {t('verifyMd5')} (BL2)
+          </button>
+        </div>
+        <p style={{ fontSize: '12px', color: 'var(--ink3)', margin: '8px 0' }}>{t('autoVerifyHint')}</p>
+        <Md5Line
+          expectedLabel={t('expectedMd5')}
+          actualLabel={t('actualMd5')}
+          expected={bl2ExpectedMd5}
+          actual={bl2ActualMd5}
+          passed={bl2Md5Passed}
+        />
+      </div>
+    </>
+  )
+}
+
+function FipPanel(props: FirmwareSectionProps) {
+  const { t } = useTranslation()
+  const {
+    fipSource,
+    fipReleaseApi,
+    fipReleaseTag,
+    isLoadingFipRelease,
+    boardFilter,
+    releaseFipOptions,
+    selectedReleaseFipKey,
+    selectedExecutionRemoteFipCandidate,
+    canDownloadBoardBl2,
+    canDownloadFip,
+    canUseRemoteFipForExecution,
+    fipExpectedMd5,
+    fipActualMd5,
+    fipMd5Passed,
     onFipSourceChange,
     onFipReleaseApiChange,
     onBoardFilterChange,
@@ -112,227 +235,163 @@ export function FirmwareSection(props: FirmwareSectionProps) {
   } = props
 
   return (
-    <section className={`card grid ${loadMode === 'bl2-fip' ? 'two-cols' : ''}`}>
-      <div>
-        <h2>{t('rambootBl2Source')}</h2>
-        <div className="field-row">
-          <label>{t('loadMode')}</label>
-          <select value={loadMode} onChange={(event) => onLoadModeChange(event.target.value as LoadMode)}>
-            <option value="bl2-only">{t('bl2Only')}</option>
-            <option value="bl2-fip">{t('bl2AndFip')}</option>
-          </select>
-        </div>
+    <>
+      <div className="tab-bar" style={{ maxWidth: '260px' }}>
+        <button
+          type="button"
+          className={fipSource === 'github-release' ? 'active' : ''}
+          onClick={() => onFipSourceChange('github-release')}
+        >
+          {t('githubRelease')}
+        </button>
+        <button
+          type="button"
+          className={fipSource === 'upload' ? 'active' : ''}
+          onClick={() => onFipSourceChange('upload')}
+        >
+          {t('uploadLocal')}
+        </button>
+      </div>
 
-        <div className="field-row">
-          <label>{t('rambootBl2Source')}</label>
-          <select value={bl2Source} onChange={(event) => onBl2SourceChange(event.target.value as FirmwareSource)}>
-            <option value="builtin">{t('builtin')}</option>
-            <option value="github-release">{t('githubRelease')}</option>
-            <option value="upload">{t('uploadLocal')}</option>
-          </select>
-        </div>
+      {fipSource === 'github-release' && (
+        <>
+          <div className="release-api-section">
+            <div className="input-group">
+              <div className="form-group">
+                <label>{t('fipReleaseApi')}</label>
+                <input className="release-api-input" value={fipReleaseApi} onChange={(event) => onFipReleaseApiChange(event.target.value)} placeholder="https://api.github.com/repos/..." />
+              </div>
+              <button type="button" className="btn btn-primary btn-sm" onClick={() => void onFetchFipRelease()} disabled={isLoadingFipRelease} style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>
+                {t('fetchFipRelease')}
+              </button>
+            </div>
+            <div className="form-group">
+              <label>{t('boardFilter')}</label>
+              <input value={boardFilter} onChange={(event) => onBoardFilterChange(event.target.value)} placeholder={t('boardFilterPlaceholder')} />
+            </div>
+            <div className="release-tag">
+              <span className={`tag-dot${fipReleaseTag ? '' : ' pending'}`} />
+              <span className="tag-label">{t('releaseTag')}</span>
+              <span className="tag-value">{fipReleaseTag || '...'}</span>
+            </div>
+          </div>
 
-        {bl2Source === 'builtin' && (
-          <div className="field-row">
-            <label>{t('chooseBl2')}</label>
+          <div className="form-group">
+            <label>{t('chooseFip')}</label>
             <select
-              className="candidate-select"
-              value={selectedBuiltinBl2Key}
-              onChange={(event) => onSelectedBuiltinBl2KeyChange(event.target.value)}
+              value={selectedReleaseFipKey}
+              onChange={(event) => onSelectedReleaseFipKeyChange(event.target.value)}
             >
-              {builtinBl2Options.map((candidate) => (
+              {releaseFipOptions.map((candidate) => (
                 <option key={candidateKey(candidate)} value={candidateKey(candidate)}>
                   {formatCandidateLabel(candidate)}
                 </option>
               ))}
             </select>
           </div>
-        )}
 
-        {bl2Source === 'github-release' && (
-          <>
-            <div className="field-row">
-              <label>{t('bl2ReleaseApi')}</label>
-              <input value={bl2ReleaseApi} onChange={(event) => onBl2ReleaseApiChange(event.target.value)} />
-            </div>
-            <div className="button-row">
-              <button type="button" onClick={() => void onFetchBl2Release()} disabled={isLoadingBl2Release}>
-                {t('fetchBl2Release')}
-              </button>
-            </div>
-            <p className="hint">{t('releaseTag')}: {bl2ReleaseTag}</p>
-            <div className="field-row">
-              <label>{t('chooseBl2')}</label>
-              <select
-                className="candidate-select"
-                value={selectedReleaseBl2Key}
-                onChange={(event) => onSelectedReleaseBl2KeyChange(event.target.value)}
-              >
-                {releaseBl2Options.map((candidate) => (
-                  <option key={candidateKey(candidate)} value={candidateKey(candidate)}>
-                    {formatCandidateLabel(candidate)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="button-row">
-              <button
-                type="button"
-                onClick={() => void onUseRemoteBl2ForExecution()}
-                disabled={!canUseRemoteBl2ForExecution}
-              >
-                {t('useRemoteBl2ForRun')}
-              </button>
-            </div>
-            {!selectedExecutionRemoteBl2Candidate && <p className="hint hint-warning">{t('remoteBl2NotSelectedForRun')}</p>}
-            {selectedExecutionRemoteBl2Candidate && (
-              <p className="hint">{t('remoteBl2InUse')}: {selectedExecutionRemoteBl2Candidate.fileName}</p>
-            )}
-            <div className="button-row">
-              <button
-                type="button"
-                onClick={() => void onDownloadRambootPreloader()}
-                disabled={!canDownloadRambootPreloader}
-              >
-                {t('downloadRambootPreloaderToLocal')}
-              </button>
-            </div>
-            {!canDownloadRambootPreloader && <p className="hint hint-warning">{t('noSelectedBl2DownloadHint')}</p>}
-            <p className="hint">{t('downloadUsesBrowserHint')}</p>
-          </>
-        )}
-
-        {bl2Source === 'upload' && (
-          <div className="field-row">
-            <label>{t('uploadLocal')}</label>
-            <input
-              type="file"
-              onChange={(event) => onUploadedBl2FileChange(event.target.files?.[0] ?? null)}
-              accept=".bin,.img"
-            />
-          </div>
-        )}
-
-        <div className="button-row">
-          <button type="button" onClick={() => void onRunBl2Md5Check()}>
-            {t('verifyMd5')} (BL2)
-          </button>
-        </div>
-        <p className="hint">{t('autoVerifyHint')}</p>
-        <Md5Line
-          expectedLabel={t('expectedMd5')}
-          actualLabel={t('actualMd5')}
-          expected={bl2ExpectedMd5}
-          actual={bl2ActualMd5}
-          passed={bl2Md5Passed}
-        />
-      </div>
-
-      {loadMode === 'bl2-fip' && (
-        <div>
-          <h2>{t('fipSource')}</h2>
-          <div className="field-row">
-            <label>{t('fipSource')}</label>
-            <select value={fipSource} onChange={(event) => onFipSourceChange(event.target.value as Exclude<FirmwareSource, 'builtin'>)}>
-              <option value="github-release">{t('githubRelease')}</option>
-              <option value="upload">{t('uploadLocal')}</option>
-            </select>
-          </div>
-
-          {fipSource === 'github-release' && (
-            <>
-              <div className="field-row">
-                <label>{t('fipReleaseApi')}</label>
-                <input value={fipReleaseApi} onChange={(event) => onFipReleaseApiChange(event.target.value)} />
-              </div>
-              <div className="field-row">
-                <label>{t('boardFilter')}</label>
-                <input value={boardFilter} onChange={(event) => onBoardFilterChange(event.target.value)} placeholder={t('boardFilterPlaceholder')} />
-              </div>
-              <div className="button-row">
-                <button type="button" onClick={() => void onFetchFipRelease()} disabled={isLoadingFipRelease}>
-                  {t('fetchFipRelease')}
-                </button>
-              </div>
-              <p className="hint">{t('releaseTag')}: {fipReleaseTag}</p>
-
-              <div className="field-row">
-                <label>{t('chooseFip')}</label>
-                <select
-                  className="candidate-select"
-                  value={selectedReleaseFipKey}
-                  onChange={(event) => onSelectedReleaseFipKeyChange(event.target.value)}
-                >
-                  {releaseFipOptions.map((candidate) => (
-                    <option key={candidateKey(candidate)} value={candidateKey(candidate)}>
-                      {formatCandidateLabel(candidate)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="button-row">
-                <button
-                  type="button"
-                  onClick={() => void onUseRemoteFipForExecution()}
-                  disabled={!canUseRemoteFipForExecution}
-                >
-                  {t('useRemoteFipForRun')}
-                </button>
-              </div>
-              {!selectedExecutionRemoteFipCandidate && <p className="hint hint-warning">{t('remoteFipNotSelectedForRun')}</p>}
-              {selectedExecutionRemoteFipCandidate && (
-                <p className="hint">{t('remoteFipInUse')}: {selectedExecutionRemoteFipCandidate.fileName}</p>
-              )}
-
-              <div className="button-row">
-                <button
-                  type="button"
-                  onClick={() => void onDownloadBoardBl2()}
-                  disabled={!canDownloadBoardBl2}
-                >
-                  {t('downloadBl2ToLocal')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void onDownloadFip()}
-                  disabled={!canDownloadFip}
-                >
-                  {t('downloadFipToLocal')}
-                </button>
-              </div>
-              {!canDownloadBoardBl2 && <p className="hint hint-warning">{t('noMatchedBoardBl2')}</p>}
-              {!canDownloadFip && <p className="hint hint-warning">{t('noSelectedFipDownloadHint')}</p>}
-              <p className="hint">{t('downloadUsesBrowserHint')}</p>
-            </>
-          )}
-
-          {fipSource === 'upload' && (
-            <div className="field-row">
-              <label>{t('uploadLocal')}</label>
-              <input
-                type="file"
-                onChange={(event) => onUploadedFipFileChange(event.target.files?.[0] ?? null)}
-                accept=".bin,.img"
-              />
-            </div>
-          )}
-
-          <div className="button-row">
-            <button type="button" onClick={() => void onRunFipMd5Check()}>
-              {t('verifyMd5')} (FIP)
+          <div className="button-row" style={{ marginTop: '12px' }}>
+            <button type="button" className="btn btn-primary" onClick={() => void onUseRemoteFipForExecution()} disabled={!canUseRemoteFipForExecution}>
+              {t('useRemoteFipForRun')}
+            </button>
+            <button type="button" className="btn btn-secondary" onClick={() => void onDownloadBoardBl2()} disabled={!canDownloadBoardBl2}>
+              {t('downloadBl2ToLocal')}
+            </button>
+            <button type="button" className="btn btn-secondary" onClick={() => void onDownloadFip()} disabled={!canDownloadFip}>
+              {t('downloadFipToLocal')}
             </button>
           </div>
-          <p className="hint">{t('autoVerifyHint')}</p>
-          <Md5Line
-            expectedLabel={t('expectedMd5')}
-            actualLabel={t('actualMd5')}
-            expected={fipExpectedMd5}
-            actual={fipActualMd5}
-            passed={fipMd5Passed}
+          {!selectedExecutionRemoteFipCandidate && <p style={{ fontSize: '12px', color: 'var(--amber)', marginTop: '8px' }}>{t('remoteFipNotSelectedForRun')}</p>}
+          {selectedExecutionRemoteFipCandidate && (
+            <p style={{ fontSize: '12px', color: 'var(--ink3)', marginTop: '8px' }}>{t('remoteFipInUse')}: {selectedExecutionRemoteFipCandidate.fileName}</p>
+          )}
+          {(!canDownloadBoardBl2 || !canDownloadFip) && (
+            <>
+              {!canDownloadBoardBl2 && <p style={{ fontSize: '12px', color: 'var(--amber)', marginTop: '4px' }}>{t('noMatchedBoardBl2')}</p>}
+              {!canDownloadFip && <p style={{ fontSize: '12px', color: 'var(--amber)', marginTop: '4px' }}>{t('noSelectedFipDownloadHint')}</p>}
+            </>
+          )}
+          <p style={{ fontSize: '12px', color: 'var(--ink3)', marginTop: '4px' }}>{t('downloadUsesBrowserHint')}</p>
+        </>
+      )}
+
+      {fipSource === 'upload' && (
+        <div className="form-group">
+          <label>{t('uploadLocal')}</label>
+          <input
+            type="file"
+            onChange={(event) => onUploadedFipFileChange(event.target.files?.[0] ?? null)}
+            accept=".bin,.img"
           />
         </div>
       )}
+
+      <div className="md5-verify-section">
+        <div className="button-row">
+          <button type="button" className="btn btn-secondary" onClick={() => void onRunFipMd5Check()}>
+            {t('verifyMd5')} (FIP)
+          </button>
+        </div>
+        <p style={{ fontSize: '12px', color: 'var(--ink3)', margin: '8px 0' }}>{t('autoVerifyHint')}</p>
+        <Md5Line
+          expectedLabel={t('expectedMd5')}
+          actualLabel={t('actualMd5')}
+          expected={fipExpectedMd5}
+          actual={fipActualMd5}
+          passed={fipMd5Passed}
+        />
+      </div>
+    </>
+  )
+}
+
+export function FirmwareSection(props: FirmwareSectionProps) {
+  const { t } = useTranslation()
+  const { loadMode, onLoadModeChange } = props
+
+  return (
+    <section className="card">
+      <div className="card-header">
+        <div className="card-icon blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="2" y="2" width="20" height="20" rx="3"/>
+            <path d="M12 2v20"/>
+            <path d="M2 12h20"/>
+          </svg>
+        </div>
+        <h2>{t('rambootBl2Source')}</h2>
+      </div>
+
+      <div className="form-group" style={{ marginBottom: '16px' }}>
+        <label>{t('loadMode')}</label>
+        <div className="tab-bar" style={{ maxWidth: '300px' }}>
+          <button
+            type="button"
+            className={loadMode === 'bl2-only' ? 'active' : ''}
+            onClick={() => onLoadModeChange('bl2-only')}
+          >
+            {t('bl2Only')}
+          </button>
+          <button
+            type="button"
+            className={loadMode === 'bl2-fip' ? 'active' : ''}
+            onClick={() => onLoadModeChange('bl2-fip')}
+          >
+            {t('bl2AndFip')}
+          </button>
+        </div>
+      </div>
+
+      <div className="form-grid-2" style={{ gap: '24px' }}>
+        <div style={{ borderRight: loadMode === 'bl2-fip' ? '1px solid var(--border)' : 'none', paddingRight: loadMode === 'bl2-fip' ? '24px' : '0' }}>
+          <Bl2Panel {...props} />
+        </div>
+        {loadMode === 'bl2-fip' && (
+          <div style={{ paddingLeft: '24px' }}>
+            <FipPanel {...props} />
+          </div>
+        )}
+      </div>
     </section>
   )
 }

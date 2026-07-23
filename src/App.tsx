@@ -25,7 +25,7 @@ function App() {
   const { t } = useTranslation()
 
   const [chip, setChip] = useState<Chip>('mt7981')
-  const [ddr, setDdr] = useState<DdrType>('ddr4')
+  const [ddr, setDdr] = useState<DdrType>('ddr3')
   const [connectBaudRateOption, setConnectBaudRateOption] = useState('115200')
   const [customConnectBaudRate, setCustomConnectBaudRate] = useState(115200)
   const [connectDataBits, setConnectDataBits] = useState<SerialDataBits>(8)
@@ -196,12 +196,19 @@ function App() {
 
   return (
     <main className="app">
-      <header className="header card">
-        <div>
+      <header className="app-header">
+        <div className="logo">
+          <div className="logo-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="2" width="20" height="20" rx="3" />
+              <circle cx="8.5" cy="8.5" r="2.5" />
+              <path d="M21 15l-5-5L5 21" />
+            </svg>
+          </div>
           <h1>{t('appTitle')}</h1>
-          <p>{t('appSubtitle')}</p>
+          <span className="subtitle">{t('appSubtitle')}</span>
         </div>
-        <div className="header-actions">
+        <div className="header-nav">
           <a
             className="nav-link"
             href={GITHUB_BOOTLOADER_URL}
@@ -234,22 +241,24 @@ function App() {
           >
             {t('navBinsketch')}
           </a>
-          <div className="lang-switch">
-            <label htmlFor="lang">{t('language')}</label>
-            <select
-              id="lang"
-              value={i18n.language.startsWith('zh') ? 'zh' : 'en'}
-              onChange={(event) => {
-                void i18n.changeLanguage(event.target.value)
-              }}
-            >
-              <option value="zh">中文</option>
-              <option value="en">English</option>
-            </select>
-          </div>
+        </div>
+        <div className="header-right">
+          <span className="version-badge">{t('appVersionLabel')} {__APP_VERSION__}</span>
+          <select
+            className="lang-select"
+            value={i18n.language.startsWith('zh') ? 'zh' : 'en'}
+            onChange={(event) => {
+              void i18n.changeLanguage(event.target.value)
+            }}
+            style={{ width: 'auto', padding: '4px 24px 4px 8px', fontSize: '12px' }}
+          >
+            <option value="zh">中文</option>
+            <option value="en">English</option>
+          </select>
         </div>
       </header>
 
+      <div className="container">
       <ConnectionSection
         detectedPortInfo={detectedPortInfo}
         connectBaudRate={connectBaudRate}
@@ -368,10 +377,11 @@ function App() {
         onSendTerminalSpecialKey={sendTerminalSpecialKey}
         onPostFlashActionChange={setPostFlashAction}
       />
+      </div>
 
-      <footer className="card footer">
-        <span>{t('appVersionLabel')}: {__APP_VERSION__}</span>
-        <span>{t('appAuthorLabel')}: {__APP_AUTHOR__}</span>
+      <footer className="app-footer">
+        <p>© 2026 Yuzhii0718. All rights reserved.</p>
+        <p>Author: Yuzhii0718&lt;<a href="mailto:admin@yuzhii0718.eu.org">admin@yuzhii0718.eu.org</a>&gt;</p>
       </footer>
     </main>
   )

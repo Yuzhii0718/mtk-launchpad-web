@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import type { KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { LogEntry } from '../../types'
@@ -45,15 +45,6 @@ type ConsoleSectionProps = {
 
 export function ConsoleSection(props: ConsoleSectionProps) {
   const { t } = useTranslation()
-  const consoleSectionRef = useRef<HTMLElement | null>(null)
-  const logsPanelRef = useRef<HTMLDivElement | null>(null)
-  const terminalPanelRef = useRef<HTMLDivElement | null>(null)
-  const shouldFollowLogsRef = useRef(true)
-  const shouldFollowTerminalRef = useRef(true)
-  const pendingLogScrollTimerRef = useRef<number | null>(null)
-  const shouldScrollPageToLogsRef = useRef(false)
-  const previousConsoleTabRef = useRef<ConsoleTab>('logs')
-
   const {
     isConnected,
     isRunning,
@@ -90,186 +81,114 @@ export function ConsoleSection(props: ConsoleSectionProps) {
     onPostFlashActionChange,
   } = props
 
-  const isNearBottom = useCallback((panel: HTMLDivElement): boolean => {
-    return panel.scrollHeight - panel.scrollTop - panel.clientHeight <= 24
+  const autoScrollLogs = useRef(true)
+  const autoScrollTerminal = useRef(true)
+
+  const logsContainerRef = useRef<HTMLDivElement | null>(null)
+  const terminalContainerRef = useRef<HTMLDivElement | null>(null)
+
+  const handleLogsScroll = useCallback(() => {
+    if (!logsContainerRef.current) return
+    const { scrollTop, scrollHeight, clientHeight } = logsContainerRef.current
+    autoScrollLogs.current = scrollHeight - scrollTop - clientHeight < 32
   }, [])
 
-  const handleExitTerminalFocus = useCallback((): void => {
-    shouldScrollPageToLogsRef.current = true
-    onActiveConsoleTabChange('logs')
-  }, [onActiveConsoleTabChange])
-
-  const handleLogsPanelScroll = useCallback((): void => {
-    const panel = logsPanelRef.current
-    if (!panel) {
-      return
-    }
-    shouldFollowLogsRef.current = isNearBottom(panel)
-  }, [isNearBottom])
-
-  const scrollPageToLogs = useCallback((): void => {
-    const target = logsPanelRef.current ?? consoleSectionRef.current
-    if (!target) {
-      return
-    }
-    target.scrollIntoView({ block: 'start', behavior: 'auto' })
+  const handleTerminalScroll = useCallback(() => {
+    if (!terminalContainerRef.current) return
+    const { scrollTop, scrollHeight, clientHeight } = terminalContainerRef.current
+    autoScrollTerminal.current = scrollHeight - scrollTop - clientHeight < 32
   }, [])
 
-  const scrollLogsToBottom = useCallback((force = false): void => {
-    const panel = logsPanelRef.current
-    if (!panel) {
-      return
+  useEffect(() => {
+    if (autoScrollLogs.current && logsContainerRef.current) {
+      logsContainerRef.current.scrollTop = logsContainerRef.current.scrollHeight
     }
-    const target = Math.max(0, panel.scrollHeight - panel.clientHeight)
-    panel.scrollTop = target
-    if (!force) {
-      return
+  }, [logs])
+
+  useEffect(() => {
+    if (activeConsoleTab === 'terminal' && autoScrollTerminal.current && terminalContainerRef.current) {
+      terminalContainerRef.current.scrollTop = terminalContainerRef.current.scrollHeight
     }
-    requestAnimationFrame(() => {
-      const nextTarget = Math.max(0, panel.scrollHeight - panel.clientHeight)
-      panel.scrollTop = nextTarget
-    })
+  }, [terminalOutput, activeConsoleTab])
+
+  const logLevelClass = useCallback((level: string): string => {
+    switch (level) {
+      case 'warn': return 'level-warn'
+      case 'error': return 'level-error'
+      case 'debug': return 'level-debug'
+      default: return 'level-info'
+    }
   }, [])
-
-  const handleTerminalPanelScroll = useCallback((): void => {
-    const panel = terminalPanelRef.current
-    if (!panel) {
-      return
-    }
-    shouldFollowTerminalRef.current = isNearBottom(panel)
-  }, [isNearBottom])
-
-  useEffect(() => {
-    if (activeConsoleTab !== 'logs') {
-      return
-    }
-    if (!shouldFollowLogsRef.current) {
-      return
-    }
-    scrollLogsToBottom()
-  }, [activeConsoleTab, logs, scrollLogsToBottom])
-
-  useLayoutEffect(() => {
-    if (activeConsoleTab !== 'logs') {
-      return
-    }
-    shouldFollowLogsRef.current = true
-    scrollLogsToBottom(true)
-    const shouldScrollPage =
-      shouldScrollPageToLogsRef.current || previousConsoleTabRef.current === 'terminal'
-    if (shouldScrollPage) {
-      shouldScrollPageToLogsRef.current = false
-      requestAnimationFrame(() => {
-        scrollPageToLogs()
-      })
-    }
-    if (pendingLogScrollTimerRef.current !== null) {
-      window.clearTimeout(pendingLogScrollTimerRef.current)
-    }
-    pendingLogScrollTimerRef.current = window.setTimeout(() => {
-      scrollLogsToBottom(true)
-      if (shouldScrollPage) {
-        scrollPageToLogs()
-      }
-    }, 120)
-    return () => {
-      if (pendingLogScrollTimerRef.current !== null) {
-        window.clearTimeout(pendingLogScrollTimerRef.current)
-        pendingLogScrollTimerRef.current = null
-      }
-    }
-  }, [activeConsoleTab, scrollLogsToBottom, scrollPageToLogs])
-
-  useEffect(() => {
-    previousConsoleTabRef.current = activeConsoleTab
-  }, [activeConsoleTab])
-
-  useEffect(() => {
-    if (activeConsoleTab !== 'terminal') {
-      return
-    }
-    const panel = terminalPanelRef.current
-    if (!panel || !shouldFollowTerminalRef.current) {
-      return
-    }
-    panel.scrollTop = panel.scrollHeight
-  }, [activeConsoleTab, terminalOutput])
-
-  const shouldFocusTerminal = activeConsoleTab === 'terminal'
 
   return (
-    <>
-      {shouldFocusTerminal && (
-        <div
-          className="terminal-focus-overlay"
-          onClick={handleExitTerminalFocus}
-          role="presentation"
-        />
-      )}
-      <section ref={consoleSectionRef} className={`card ${shouldFocusTerminal ? 'console-terminal-focused' : ''}`}>
-        {shouldFocusTerminal && (
-          <button
-            type="button"
-            className="terminal-focus-close"
-            onClick={handleExitTerminalFocus}
-            aria-label={t('closeFocus')}
-            title={t('closeFocus')}
-          >
-            ×
-          </button>
-        )}
-        <div className="button-row workflow-action-row">
+    <section className="card">
+      <div className="card-header">
+        <div className="card-icon blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="4 17 10 11 4 5"/>
+            <line x1="12" y1="19" x2="20" y2="19"/>
+          </svg>
+        </div>
+        <h2>{t('logs')}</h2>
+      </div>
+
+      <div className="button-row workflow-action-row">
         <button type="button" onClick={() => void onRunWorkflow()} disabled={!isConnected || isRunning}>
           {isRunning ? t('running') : t('startFlash')}
         </button>
-        <button type="button" onClick={() => void onTerminateExecution()} disabled={!isRunning || isTerminating}>
+        <button
+          type="button"
+          onClick={() => void onTerminateExecution()}
+          disabled={!isRunning || isTerminating}
+          style={{ background: 'var(--red)', color: 'white', border: 'none' }}
+        >
           {t('terminateExecution')}
         </button>
       </div>
 
       <div className="console-toolbar">
         <div className="console-toolbar-left">
-          <div className="console-segmented" role="tablist" aria-label={t('logs')}>
-          <button
-            type="button"
-            className={`segment-button ${activeConsoleTab === 'logs' ? 'active' : ''}`}
-            onClick={() => onActiveConsoleTabChange('logs')}
-          >
-            {t('logs')}
-          </button>
-          <button
-            type="button"
-            className={`segment-button ${activeConsoleTab === 'terminal' ? 'active' : ''}`}
-            onClick={() => onActiveConsoleTabChange('terminal')}
-          >
-            {t('terminal')}
-          </button>
-        </div>
+          <div className="console-segmented">
+            <button
+              type="button"
+              className={`segment-button ${activeConsoleTab === 'logs' ? 'active' : ''}`}
+              onClick={() => onActiveConsoleTabChange('logs')}
+            >
+              {t('logs')}
+            </button>
+            <button
+              type="button"
+              className={`segment-button ${activeConsoleTab === 'terminal' ? 'active' : ''}`}
+              onClick={() => onActiveConsoleTabChange('terminal')}
+            >
+              {t('terminal')}
+            </button>
+          </div>
 
-        <div className="console-tab-actions">
-          {activeConsoleTab === 'logs' && (
-            <button type="button" onClick={onClearLogs}>{t('clearLogs')}</button>
-          )}
+          <div className="console-tab-actions">
+            {activeConsoleTab === 'logs' && (
+              <button type="button" onClick={onClearLogs}>{t('clearLogs')}</button>
+            )}
 
-          {activeConsoleTab === 'terminal' && (
-            <>
-              <button
-                type="button"
-                onClick={() => void onStartTerminal()}
-                disabled={!isConnected || isRunning || isTerminalRunning}
-              >
-                {t('startTerminal')}
-              </button>
-              <button
-                type="button"
-                onClick={() => void onStopTerminal()}
-                disabled={!isTerminalRunning}
-              >
-                {t('stopTerminal')}
-              </button>
-            </>
-          )}
-        </div>
+            {activeConsoleTab === 'terminal' && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => void onStartTerminal()}
+                  disabled={!isConnected || isRunning || isTerminalRunning}
+                >
+                  {t('startTerminal')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void onStopTerminal()}
+                  disabled={!isTerminalRunning}
+                >
+                  {t('stopTerminal')}
+                </button>
+              </>
+            )}
+          </div>
         </div>
         <div className="console-toolbar-right">
           <div className="post-flash-action-segmented">
@@ -298,110 +217,115 @@ export function ConsoleSection(props: ConsoleSectionProps) {
         </div>
       </div>
 
-      {activeConsoleTab === 'logs' && (
-        <>
-          <h2>{t('logs')}</h2>
-          <div className="log-panel" ref={logsPanelRef} onScroll={handleLogsPanelScroll}>
-            {logs.map((entry) => (
-              <div key={entry.id} className={`log-line ${entry.level}`}>
-                [{entry.timestamp}] {entry.message}
-              </div>
-            ))}
+      {activeConsoleTab === 'logs' ? (
+        <div className="logs-container" ref={logsContainerRef} onScroll={handleLogsScroll}>
+          {logs.map((entry) => (
+            <div key={entry.id} className={`log-entry ${logLevelClass(entry.level)}`}>
+              <span className="timestamp">{entry.timestamp}</span>
+              {entry.message}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="terminal-container">
+          <div
+            className="terminal-output"
+            ref={terminalContainerRef}
+            onScroll={handleTerminalScroll}
+          >
+            {terminalOutput}
           </div>
-        </>
-      )}
 
-      {activeConsoleTab === 'terminal' && (
-        <>
-          <h2>{t('terminal')}</h2>
-          <div className="terminal-meta-row">
-            <div className="terminal-meta-left">
-              <span>{t('terminalRxBytes')}: {terminalRxBytes}</span>
-              <div className="terminal-meta-toggles">
-                <label className="terminal-toggle">
-                  <input
-                    type="checkbox"
-                    checked={terminalHexDisplay}
-                    onChange={(event) => onTerminalHexDisplayChange(event.target.checked)}
-                  />
-                  {t('terminalHexDisplay')}
-                </label>
-                <label className="terminal-toggle">
-                  <input
-                    type="checkbox"
-                    checked={terminalShowTimestamp}
-                    onChange={(event) => onTerminalShowTimestampChange(event.target.checked)}
-                  />
-                  {t('terminalShowTimestamp')}
-                </label>
-                <label className="terminal-toggle">
-                  <input
-                    type="checkbox"
-                    checked={terminalShowControlChars}
-                    onChange={(event) => onTerminalShowControlCharsChange(event.target.checked)}
-                  />
-                  {t('terminalShowControlChars')}
-                </label>
-              </div>
-            </div>
-            <div className="terminal-meta-actions">
-              <div className="terminal-meta-group terminal-meta-group-tight">
-                <button type="button" onClick={onClearTerminalOutput}>{t('terminalClear')}</button>
-                <button type="button" onClick={onSaveTerminalOutput}>{t('terminalSave')}</button>
-              </div>
-            </div>
-          </div>
-          <div className="terminal-panel" ref={terminalPanelRef} onScroll={handleTerminalPanelScroll}>
-            {terminalOutput || t('terminalNoOutput')}
-          </div>
           <div className="terminal-input-row">
             <input
+              type="text"
               value={terminalInput}
               onChange={(event) => onTerminalInputChange(event.target.value)}
               onKeyDown={onTerminalInputKeyDown}
-              placeholder={terminalHexDisplay ? t('terminalInputPlaceholderHex') : t('terminalInputPlaceholder')}
+              placeholder={t('terminalInputPlaceholder')}
               disabled={!isTerminalRunning}
             />
-            <select
-              value={terminalNewlineMode}
-              onChange={(event) => onTerminalNewlineModeChange(event.target.value as TerminalNewlineMode)}
-              disabled={!isTerminalRunning || !terminalAppendNewline}
-            >
-              <option value="crlf">{t('newlineCRLF')}</option>
-              <option value="lf">{t('newlineLF')}</option>
-              <option value="cr">{t('newlineCR')}</option>
-              <option value="none">{t('newlineNone')}</option>
-            </select>
-            <label className="terminal-toggle">
-              <input
-                type="checkbox"
-                checked={terminalAppendNewline}
-                onChange={(event) => onTerminalAppendNewlineChange(event.target.checked)}
-                disabled={!isTerminalRunning}
-              />
-              {t('terminalAppendNewline')}
-            </label>
             <button
               type="button"
               onClick={() => void onSendTerminalInput()}
-              disabled={!isTerminalRunning || !terminalInput.trim()}
+              disabled={!isTerminalRunning}
             >
               {t('terminalSend')}
             </button>
           </div>
-          <div className="terminal-special-row">
-            <span>{t('terminalSpecialActions')}:</span>
-            <button type="button" onClick={() => void onSendTerminalSpecialKey('esc')} disabled={!isTerminalRunning}>{t('specialEsc')}</button>
-            <button type="button" onClick={() => void onSendTerminalSpecialKey('enter')} disabled={!isTerminalRunning}>{t('specialEnter')}</button>
-            <button type="button" onClick={() => void onSendTerminalSpecialKey('up')} disabled={!isTerminalRunning}>{t('specialArrowUp')}</button>
-            <button type="button" onClick={() => void onSendTerminalSpecialKey('down')} disabled={!isTerminalRunning}>{t('specialArrowDown')}</button>
-            <button type="button" onClick={() => void onSendTerminalSpecialKey('left')} disabled={!isTerminalRunning}>{t('specialArrowLeft')}</button>
-            <button type="button" onClick={() => void onSendTerminalSpecialKey('right')} disabled={!isTerminalRunning}>{t('specialArrowRight')}</button>
+
+          <div className="terminal-meta">
+            <div className="terminal-meta-actions">
+              <div className="terminal-meta-group terminal-meta-group-tight">
+                <button type="button" className="btn btn-sm" style={{
+                  fontSize: '11px', padding: '4px 8px',
+                  background: 'var(--surface2)', color: 'var(--ink2)',
+                  border: '1px solid var(--border2)'
+                }}                 onClick={() => void onClearTerminalOutput()}>{t('terminalClear')}</button>
+                <button type="button" className="btn btn-sm" style={{
+                  fontSize: '11px', padding: '4px 8px',
+                  background: 'var(--surface2)', color: 'var(--ink2)',
+                  border: '1px solid var(--border2)'
+                }} onClick={onSaveTerminalOutput}>{t('terminalSave')}</button>
+              </div>
+
+              <div className="terminal-meta-group">
+                <label>{t('terminalNewline')}</label>
+                <select
+                  value={terminalNewlineMode}
+                  onChange={(event) => onTerminalNewlineModeChange(event.target.value as TerminalNewlineMode)}
+                >
+                  <option value="crlf">{t('newlineCRLF')}</option>
+                  <option value="lf">{t('newlineLF')}</option>
+                  <option value="cr">{t('newlineCR')}</option>
+                </select>
+              </div>
+
+              <div className="terminal-meta-group terminal-meta-group-tight">
+                <input
+                  type="checkbox"
+                  id="append-newline"
+                  checked={terminalAppendNewline}
+                  onChange={(event) => onTerminalAppendNewlineChange(event.target.checked)}
+                />
+                <label htmlFor="append-newline">{t('terminalAppendNewline')}</label>
+              </div>
+
+              <div className="terminal-meta-group terminal-meta-group-tight">
+                <input
+                  type="checkbox"
+                  id="hex-display"
+                  checked={terminalHexDisplay}
+                  onChange={(event) => onTerminalHexDisplayChange(event.target.checked)}
+                />
+                <label htmlFor="hex-display">HEX</label>
+              </div>
+
+              <div className="terminal-meta-group terminal-meta-group-tight">
+                <input
+                  type="checkbox"
+                  id="show-timestamp"
+                  checked={terminalShowTimestamp}
+                  onChange={(event) => onTerminalShowTimestampChange(event.target.checked)}
+                />
+                <label htmlFor="show-timestamp">{t('terminalShowTimestamp')}</label>
+              </div>
+
+              <div className="terminal-meta-group terminal-meta-group-tight">
+                <input
+                  type="checkbox"
+                  id="show-control-chars"
+                  checked={terminalShowControlChars}
+                  onChange={(event) => onTerminalShowControlCharsChange(event.target.checked)}
+                />
+                <label htmlFor="show-control-chars">{t('terminalShowControlChars')}</label>
+              </div>
+
+              <span className="rx-bytes">RX: {terminalRxBytes} B</span>
+            </div>
           </div>
-          <p className="hint">{isTerminalRunning ? t('terminalRunningHint') : t('terminalStoppedHint')}</p>
-        </>
+        </div>
       )}
-      </section>
-    </>
+    </section>
   )
 }
