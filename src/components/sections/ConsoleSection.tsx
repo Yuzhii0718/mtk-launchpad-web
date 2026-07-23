@@ -3,6 +3,7 @@ import type { KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { LogEntry } from '../../types'
 import type { TerminalNewlineMode, TerminalSpecialKey } from '../../utils/terminalControl'
+import type { PostFlashAction } from '../../types'
 
 type ConsoleTab = 'logs' | 'terminal'
 
@@ -21,7 +22,7 @@ type ConsoleSectionProps = {
   terminalHexDisplay: boolean
   terminalShowTimestamp: boolean
   terminalShowControlChars: boolean
-  isUbootInterrupting: boolean
+  postFlashAction: PostFlashAction
   onRunWorkflow: () => Promise<void>
   onTerminateExecution: () => Promise<void>
   onClearLogs: () => void
@@ -39,8 +40,7 @@ type ConsoleSectionProps = {
   onTerminalShowControlCharsChange: (value: boolean) => void
   onSendTerminalInput: () => Promise<void>
   onSendTerminalSpecialKey: (key: TerminalSpecialKey) => Promise<void>
-  onInterruptIntoUboot: () => Promise<void>
-  onInterruptIntoFailsafe: () => Promise<void>
+  onPostFlashActionChange: (value: PostFlashAction) => void
 }
 
 export function ConsoleSection(props: ConsoleSectionProps) {
@@ -69,7 +69,7 @@ export function ConsoleSection(props: ConsoleSectionProps) {
     terminalHexDisplay,
     terminalShowTimestamp,
     terminalShowControlChars,
-    isUbootInterrupting,
+    postFlashAction,
     onRunWorkflow,
     onTerminateExecution,
     onClearLogs,
@@ -87,8 +87,7 @@ export function ConsoleSection(props: ConsoleSectionProps) {
     onTerminalShowControlCharsChange,
     onSendTerminalInput,
     onSendTerminalSpecialKey,
-    onInterruptIntoUboot,
-    onInterruptIntoFailsafe,
+    onPostFlashActionChange,
   } = props
 
   const isNearBottom = useCallback((panel: HTMLDivElement): boolean => {
@@ -228,8 +227,9 @@ export function ConsoleSection(props: ConsoleSectionProps) {
         </button>
       </div>
 
-      <div className="console-toolbar-row">
-        <div className="console-segmented" role="tablist" aria-label={t('logs')}>
+      <div className="console-toolbar">
+        <div className="console-toolbar-left">
+          <div className="console-segmented" role="tablist" aria-label={t('logs')}>
           <button
             type="button"
             className={`segment-button ${activeConsoleTab === 'logs' ? 'active' : ''}`}
@@ -269,6 +269,32 @@ export function ConsoleSection(props: ConsoleSectionProps) {
               </button>
             </>
           )}
+        </div>
+        </div>
+        <div className="console-toolbar-right">
+          <div className="post-flash-action-segmented">
+            <button
+              type="button"
+              className={`seg-item ${postFlashAction === 'null' ? 'active' : ''}`}
+              onClick={() => onPostFlashActionChange('null')}
+            >
+              {t('postActionNull')}
+            </button>
+            <button
+              type="button"
+              className={`seg-item ${postFlashAction === 'console' ? 'active' : ''}`}
+              onClick={() => onPostFlashActionChange('console')}
+            >
+              {t('postActionConsole')}
+            </button>
+            <button
+              type="button"
+              className={`seg-item ${postFlashAction === 'failsafe' ? 'active' : ''}`}
+              onClick={() => onPostFlashActionChange('failsafe')}
+            >
+              {t('postActionFailsafe')}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -319,24 +345,6 @@ export function ConsoleSection(props: ConsoleSectionProps) {
               </div>
             </div>
             <div className="terminal-meta-actions">
-              {isTerminalRunning && (
-                <div className="terminal-meta-group">
-                  <button
-                    type="button"
-                    onClick={() => void onInterruptIntoUboot()}
-                    disabled={isUbootInterrupting || isTerminating}
-                  >
-                    {isUbootInterrupting ? t('ubootInterrupting') : t('interruptIntoUboot')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void onInterruptIntoFailsafe()}
-                    disabled={isUbootInterrupting || isTerminating}
-                  >
-                    {t('interruptIntoFailsafe')}
-                  </button>
-                </div>
-              )}
               <div className="terminal-meta-group terminal-meta-group-tight">
                 <button type="button" onClick={onClearTerminalOutput}>{t('terminalClear')}</button>
                 <button type="button" onClick={onSaveTerminalOutput}>{t('terminalSave')}</button>

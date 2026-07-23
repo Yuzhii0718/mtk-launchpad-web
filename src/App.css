@@ -456,3 +456,53 @@ button:disabled {
     transform: translate(-50%, -50%) scale(1);
   }
 }
+
+/* flash action segmented */
+.post-flash-action-segmented {
+  display: flex;
+  background: #f0f0f5;
+  border-radius: 20px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.post-flash-action-segmented .seg-item {
+  padding: 2px 12px;
+  border-radius: 18px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #666;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  transition: background 0.15s, color 0.15s;
+  line-height: 22px;
+}
+.post-flash-action-segmented .seg-item.active {
+  background: #fff;
+  color: #1890ff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+/* ConsoleSection */
+.console-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.console-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+.console-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}

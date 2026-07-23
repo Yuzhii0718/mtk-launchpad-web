@@ -54,3 +54,5 @@ export interface LogEntry {
   message: string
   timestamp: string
 }
+
+export type PostFlashAction = 'null' | 'console' | 'failsafe'

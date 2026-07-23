@@ -5,11 +5,15 @@ import type { Chip, LogLevel, SerialOpenOptions } from '../types'
 import { sleepMs, stringifyError } from '../utils/common'
 import { SerialConnection } from '../services/serial/SerialConnection'
 import { MtkUartProtocol } from '../services/serial/MtkUartProtocol'
+import type { PostFlashAction } from '../types'
 
 export type SerialTerminalActions = {
   stopTerminalSession: (withLog: boolean) => Promise<void>
   startTerminalSession: (withLog: boolean) => Promise<void>
   setActiveConsoleTab: (value: 'logs' | 'terminal') => void
+  handleInterruptIntoUboot?: () => Promise<void>
+  handleInterruptIntoFailsafe?: () => Promise<void>
+  postFlashAction?: PostFlashAction
 }
 
 type ResolvedPayload = {
@@ -191,6 +195,14 @@ export function useSerialWorkflow(input: UseSerialWorkflowParams) {
         if (terminalActions) {
           terminalActions.setActiveConsoleTab('terminal')
           await terminalActions.startTerminalSession(true)
+          const action = terminalActions.postFlashAction
+          if (action === 'null') {
+            // No action
+          } else if (action === 'failsafe') {
+            if (terminalActions.handleInterruptIntoFailsafe) {
+              await terminalActions.handleInterruptIntoFailsafe()
+            }
+          }
         }
       }
     }

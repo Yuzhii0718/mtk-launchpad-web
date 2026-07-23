@@ -18,6 +18,7 @@ import { useLogs } from './hooks/useLogs'
 import { useTerminalController } from './hooks/useTerminalController'
 import { useFirmwareFlow } from './hooks/useFirmwareFlow'
 import { useSerialWorkflow, type SerialTerminalActions } from './hooks/useSerialWorkflow'
+import type { PostFlashAction } from './types'
 
 function App() {
   const { t } = useTranslation()
@@ -108,6 +109,7 @@ function App() {
   })
 
   const terminalActionsRef = useRef<SerialTerminalActions | null>(null)
+  const [postFlashAction, setPostFlashAction] = useState<PostFlashAction>('console')
 
   const {
     connectionRef,
@@ -151,7 +153,6 @@ function App() {
     setTerminalShowTimestamp,
     terminalShowControlChars,
     setTerminalShowControlChars,
-    isUbootInterrupting,
     clearTerminalOutput,
     saveTerminalOutputToFile,
     stopTerminalSession,
@@ -174,12 +175,15 @@ function App() {
       stopTerminalSession,
       startTerminalSession,
       setActiveConsoleTab,
+      handleInterruptIntoUboot,
+      handleInterruptIntoFailsafe,
+      postFlashAction,
     }
 
     return () => {
       terminalActionsRef.current = null
     }
-  }, [setActiveConsoleTab, startTerminalSession, stopTerminalSession])
+  }, [setActiveConsoleTab, startTerminalSession, stopTerminalSession, handleInterruptIntoUboot, handleInterruptIntoFailsafe, postFlashAction])
 
   const ddrOptions = DDR_OPTIONS_BY_CHIP[chip]
 
@@ -335,7 +339,7 @@ function App() {
         terminalHexDisplay={terminalHexDisplay}
         terminalShowTimestamp={terminalShowTimestamp}
         terminalShowControlChars={terminalShowControlChars}
-        isUbootInterrupting={isUbootInterrupting}
+        postFlashAction={postFlashAction}
         onRunWorkflow={runWorkflow}
         onTerminateExecution={handleTerminateExecution}
         onClearLogs={clearLogs}
@@ -353,8 +357,7 @@ function App() {
         onTerminalShowControlCharsChange={setTerminalShowControlChars}
         onSendTerminalInput={handleSendTerminalInput}
         onSendTerminalSpecialKey={sendTerminalSpecialKey}
-        onInterruptIntoUboot={handleInterruptIntoUboot}
-        onInterruptIntoFailsafe={handleInterruptIntoFailsafe}
+        onPostFlashActionChange={setPostFlashAction}
       />
 
       <footer className="card footer">
