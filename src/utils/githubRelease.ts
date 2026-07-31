@@ -48,15 +48,36 @@ function buildLocalProxyUrl(targetUrl: string, accept?: string): string {
   return `${LOCAL_PROXY_PATH}?${params.toString()}`
 }
 
-function shouldTryLocalDevProxy(): boolean {
+/** Lazily memoized check: does the same-origin proxy endpoint exist? */
+let proxyAvailable: boolean | null = null
+let proxyCheckPromise: Promise<boolean> | null = null
+
+async function checkProxyAvailable(): Promise<boolean> {
+  if (proxyAvailable !== null) return proxyAvailable
+  if (proxyCheckPromise) return proxyCheckPromise
+
   if (typeof window === 'undefined') {
+    proxyAvailable = true
     return true
   }
 
-  const host = window.location.hostname.toLowerCase()
-  return host === 'localhost'
-    || host === '127.0.0.1'
-    || host === '[::1]'
+  proxyCheckPromise = (async () => {
+    try {
+      // Use a simple, fast-responding target for the check.
+      const testUrl = buildLocalProxyUrl('https://api.github.com/zen')
+      const resp = await fetch(testUrl, { method: 'HEAD', cache: 'no-store' })
+      // SPA fallback (e.g. Cloudflare Pages) returns text/html for unknown
+      // routes with a 200 status. The real proxy returns text/plain on errors
+      // or application/octet-stream on success — never text/html.
+      const ct = (resp.headers.get('content-type') || '').toLowerCase()
+      proxyAvailable = resp.ok && !ct.includes('text/html')
+    } catch {
+      proxyAvailable = false
+    }
+    return proxyAvailable
+  })()
+
+  return proxyCheckPromise
 }
 
 export interface CdnMirrorConfig {
@@ -118,93 +139,79 @@ export async function downloadFirmwareCandidate(candidate: FirmwareCandidate, cd
   }
 
   const attempts: Array<{ url: string; init?: RequestInit; label: string }> = []
-  const localDevProxyEnabled = shouldTryLocalDevProxy()
-  const includeNoisyFallbacks = localDevProxyEnabled
+  const proxyReady = await checkProxyAvailable()
   const cdnEnabled = cdn?.enabled && cdn?.baseUrl
 
-  // CDN/mirror as the first attempt (before local dev proxy and CORS proxies)
+  // --- 1. CDN (proxied if proxy is available, direct otherwise) ---
   if (cdnEnabled && candidate.url) {
+    const cdnUrl = buildCdnUrl(candidate.url, cdn!.baseUrl)
+    if (proxyReady) {
+      attempts.push({ url: buildLocalProxyUrl(cdnUrl), label: 'cdn-mirror-via-proxy' })
+    } else {
+      attempts.push({ url: cdnUrl, label: 'cdn-mirror' })
+    }
+  }
+
+  // --- 2. Proxied GitHub URLs (only if proxy is available) ---
+  if (proxyReady) {
+    if (candidate.githubAssetApiUrl) {
+      attempts.push({
+        url: buildLocalProxyUrl(candidate.githubAssetApiUrl, 'application/octet-stream'),
+        label: 'local-proxy-github-asset-api',
+      })
+    }
+    if (candidate.url) {
+      attempts.push({
+        url: buildLocalProxyUrl(candidate.url),
+        label: 'local-proxy-github-download-url',
+      })
+    }
+  }
+
+  // --- 3. Direct GitHub URLs (always try these) ---
+  if (candidate.githubAssetApiUrl) {
     attempts.push({
-      url: buildCdnUrl(candidate.url, cdn!.baseUrl),
-      label: 'cdn-mirror',
+      url: candidate.githubAssetApiUrl,
+      init: { headers: { Accept: 'application/octet-stream' } },
+      label: 'github-asset-api',
+    })
+  }
+  if (candidate.url) {
+    attempts.push({
+      url: candidate.url,
+      label: 'github-download-url',
     })
   }
 
-  if (candidate.githubAssetApiUrl) {
-    if (localDevProxyEnabled) {
-      attempts.push({
-        url: buildLocalProxyUrl(candidate.githubAssetApiUrl, 'application/octet-stream'),
-        label: 'local-dev-proxy-github-asset-api',
-      })
-
-      attempts.push({
-        url: candidate.githubAssetApiUrl,
-        init: {
-          headers: {
-            Accept: 'application/octet-stream',
-          },
-        },
-        label: 'github-asset-api',
-      })
-    }
-  }
-  if (candidate.url) {
-    if (localDevProxyEnabled) {
-      attempts.push({
-        url: buildLocalProxyUrl(candidate.url),
-        label: 'local-dev-proxy-github-browser-download-url',
-      })
-
-      attempts.push({
-        url: candidate.url,
-        label: 'github-browser-download-url',
-      })
-    }
-  }
-
+  // --- 4. CORS proxies ---
   if (candidate.githubAssetApiUrl) {
     for (const proxy of CORS_PROXIES) {
       attempts.push({
         url: proxy.buildUrl(candidate.githubAssetApiUrl),
-        init: {
-          headers: {
-            Accept: 'application/octet-stream',
-          },
-        },
+        init: { headers: { Accept: 'application/octet-stream' } },
         label: `${proxy.label}-github-asset-api`,
       })
     }
-
-    if (includeNoisyFallbacks) {
-      for (const proxy of NOISY_FALLBACK_PROXIES) {
-        attempts.push({
-          url: proxy.buildUrl(candidate.githubAssetApiUrl),
-          init: {
-            headers: {
-              Accept: 'application/octet-stream',
-            },
-          },
-          label: `${proxy.label}-github-asset-api`,
-        })
-      }
+    for (const proxy of NOISY_FALLBACK_PROXIES) {
+      attempts.push({
+        url: proxy.buildUrl(candidate.githubAssetApiUrl),
+        init: { headers: { Accept: 'application/octet-stream' } },
+        label: `${proxy.label}-github-asset-api`,
+      })
     }
   }
-
   if (candidate.url) {
     for (const proxy of CORS_PROXIES) {
       attempts.push({
         url: proxy.buildUrl(candidate.url),
-        label: `${proxy.label}-github-browser-download-url`,
+        label: `${proxy.label}-github-download-url`,
       })
     }
-
-    if (includeNoisyFallbacks) {
-      for (const proxy of NOISY_FALLBACK_PROXIES) {
-        attempts.push({
-          url: proxy.buildUrl(candidate.url),
-          label: `${proxy.label}-github-browser-download-url`,
-        })
-      }
+    for (const proxy of NOISY_FALLBACK_PROXIES) {
+      attempts.push({
+        url: proxy.buildUrl(candidate.url),
+        label: `${proxy.label}-github-download-url`,
+      })
     }
   }
 
@@ -235,12 +242,8 @@ export async function downloadFirmwareCandidate(candidate: FirmwareCandidate, cd
     }
   }
 
-  const extraHint = localDevProxyEnabled
-    ? ''
-    : ' Hint: this site is running in static mode; local dev proxy is unavailable, so remote loading depends on CORS-capable relay endpoints.'
-
   throw new Error(
-    `Remote asset fetch failed. ${errors.join(' | ')}${extraHint}`,
+    `Remote asset fetch failed. ${errors.join(' | ')}`,
   )
 }
 

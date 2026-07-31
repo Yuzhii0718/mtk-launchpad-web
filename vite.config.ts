@@ -67,6 +67,9 @@ const ALLOWED_PROXY_HOSTS = new Set([
   'github.com',
   'release-assets.githubusercontent.com',
   'objects.githubusercontent.com',
+  // Common CDN mirrors (user-configurable, so keep this list updated)
+  'ghproxy.net',
+  'gh-proxy.com',
 ])
 
 async function handleGithubAssetProxy(req: IncomingMessage, res: ServerResponse): Promise<void> {
