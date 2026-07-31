@@ -167,7 +167,7 @@ export function ConnectionSection(props: ConnectionSectionProps) {
 
       <section className="card">
         <div className="card-header">
-          <div className="card-icon blue">
+          <div className="card-icon purple">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="2" y="2" width="20" height="20" rx="3"/>
               <path d="M6 2v20"/>

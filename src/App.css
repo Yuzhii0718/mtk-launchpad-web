@@ -294,6 +294,8 @@
 .card-header .card-icon.green { background: var(--green-lt); color: var(--green); }
 .card-header .card-icon.amber { background: var(--amber-lt); color: var(--amber); }
 .card-header .card-icon.red { background: var(--red-lt); color: var(--red); }
+.card-header .card-icon.purple { background: var(--purple-lt); color: var(--purple); }
+.card-header .card-icon.cyan { background: var(--cyan-lt); color: var(--cyan); }
 
 /* ============================================================
    Form grids & form groups

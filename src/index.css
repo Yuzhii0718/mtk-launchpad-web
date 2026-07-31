@@ -16,6 +16,10 @@
   --red-lt: #FFF0F0;
   --amber: #C07C10;
   --amber-lt: #FFF8ED;
+  --purple: #8B5CF6;
+  --purple-lt: #F4F0FE;
+  --cyan: #06B6D4;
+  --cyan-lt: #ECFEFF;
   --radius: 12px;
   --radius-sm: 8px;
   --shadow: 0 1px 3px rgba(0,0,0,0.05), 0 4px 12px rgba(0,0,0,0.04);
