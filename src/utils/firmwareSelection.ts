@@ -1,6 +1,6 @@
 import type { FirmwareCandidate, FirmwareSource } from '../types'
 import { candidateKey, parseFirmwareName } from './fileNameParsers'
-import { downloadFirmwareCandidate } from './githubRelease'
+import { downloadFirmwareCandidate, type CdnMirrorConfig } from './githubRelease'
 
 export async function resolveBl2Selection(input: {
   bl2Source: FirmwareSource
@@ -10,6 +10,7 @@ export async function resolveBl2Selection(input: {
   selectedReleaseBl2Key: string
   uploadedBl2File: File | null
   executionRemoteBl2Key?: string
+  cdn?: CdnMirrorConfig
 }): Promise<{ candidate: FirmwareCandidate; payload: ArrayBuffer }> {
   const {
     bl2Source,
@@ -19,6 +20,7 @@ export async function resolveBl2Selection(input: {
     selectedReleaseBl2Key,
     uploadedBl2File,
     executionRemoteBl2Key,
+    cdn,
   } = input
   if (bl2Source === 'builtin') {
     const candidate = builtinBl2Options.find((item) => candidateKey(item) === selectedBuiltinBl2Key)
@@ -27,7 +29,7 @@ export async function resolveBl2Selection(input: {
     }
     return {
       candidate,
-      payload: await downloadFirmwareCandidate(candidate),
+      payload: await downloadFirmwareCandidate(candidate, cdn),
     }
   }
 
@@ -39,7 +41,7 @@ export async function resolveBl2Selection(input: {
     }
     return {
       candidate,
-      payload: await downloadFirmwareCandidate(candidate),
+      payload: await downloadFirmwareCandidate(candidate, cdn),
     }
   }
 
@@ -69,8 +71,9 @@ export async function resolveFipSelection(input: {
   selectedReleaseFipKey: string
   uploadedFipFile: File | null
   executionRemoteFipKey?: string
+  cdn?: CdnMirrorConfig
 }): Promise<{ candidate: FirmwareCandidate; payload: ArrayBuffer }> {
-  const { fipSource, releaseFipOptions, selectedReleaseFipKey, uploadedFipFile, executionRemoteFipKey } = input
+  const { fipSource, releaseFipOptions, selectedReleaseFipKey, uploadedFipFile, executionRemoteFipKey, cdn } = input
   if (fipSource === 'github-release') {
     const pickKey = executionRemoteFipKey || selectedReleaseFipKey
     const candidate = releaseFipOptions.find((item) => candidateKey(item) === pickKey)
@@ -79,7 +82,7 @@ export async function resolveFipSelection(input: {
     }
     return {
       candidate,
-      payload: await downloadFirmwareCandidate(candidate),
+      payload: await downloadFirmwareCandidate(candidate, cdn),
     }
   }
 

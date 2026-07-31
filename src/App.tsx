@@ -67,6 +67,10 @@ function App() {
     isLoadingFipRelease,
     boardFilter,
     setBoardFilter,
+    cdnMirrorUrl,
+    setCdnMirrorUrl,
+    cdnMirrorEnabled,
+    setCdnMirrorEnabled,
     selectedBuiltinBl2Key,
     setSelectedBuiltinBl2Key,
     selectedReleaseBl2Key,
@@ -348,6 +352,10 @@ function App() {
         onDownloadFip={handleDownloadFip}
         onUploadedFipFileChange={setUploadedFipFile}
         onRunFipMd5Check={() => runFipMd5Check(true)}
+        cdnMirrorUrl={cdnMirrorUrl}
+        onCdnMirrorUrlChange={setCdnMirrorUrl}
+        cdnMirrorEnabled={cdnMirrorEnabled}
+        onCdnMirrorEnabledChange={setCdnMirrorEnabled}
       />
 
       <ConsoleSection

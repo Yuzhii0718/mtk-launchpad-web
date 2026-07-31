@@ -59,6 +59,16 @@ function shouldTryLocalDevProxy(): boolean {
     || host === '[::1]'
 }
 
+export interface CdnMirrorConfig {
+  enabled: boolean
+  baseUrl: string
+}
+
+export function buildCdnUrl(originalUrl: string, cdnMirrorUrl: string): string {
+  const base = cdnMirrorUrl.replace(/\/+$/, '')
+  return `${base}/${originalUrl}`
+}
+
 export async function fetchReleaseCandidates(apiUrl: string): Promise<ReleaseQueryResult> {
   const response = await fetch(apiUrl, {
     headers: {
@@ -94,7 +104,7 @@ export async function fetchReleaseCandidates(apiUrl: string): Promise<ReleaseQue
   }
 }
 
-export async function downloadFirmwareCandidate(candidate: FirmwareCandidate): Promise<ArrayBuffer> {
+export async function downloadFirmwareCandidate(candidate: FirmwareCandidate, cdn?: CdnMirrorConfig): Promise<ArrayBuffer> {
   if (candidate.source !== 'github-release') {
     if (!candidate.url) {
       throw new Error('Missing firmware URL')
@@ -110,6 +120,15 @@ export async function downloadFirmwareCandidate(candidate: FirmwareCandidate): P
   const attempts: Array<{ url: string; init?: RequestInit; label: string }> = []
   const localDevProxyEnabled = shouldTryLocalDevProxy()
   const includeNoisyFallbacks = localDevProxyEnabled
+  const cdnEnabled = cdn?.enabled && cdn?.baseUrl
+
+  // CDN/mirror as the first attempt (before local dev proxy and CORS proxies)
+  if (cdnEnabled && candidate.url) {
+    attempts.push({
+      url: buildCdnUrl(candidate.url, cdn!.baseUrl),
+      label: 'cdn-mirror',
+    })
+  }
 
   if (candidate.githubAssetApiUrl) {
     if (localDevProxyEnabled) {
@@ -225,13 +244,17 @@ export async function downloadFirmwareCandidate(candidate: FirmwareCandidate): P
   )
 }
 
-export function triggerBrowserFileDownload(candidate: FirmwareCandidate): void {
+export function triggerBrowserFileDownload(candidate: FirmwareCandidate, cdn?: CdnMirrorConfig): void {
   if (!candidate.url) {
     throw new Error('Missing browser download URL')
   }
 
+  const href = (cdn?.enabled && cdn?.baseUrl)
+    ? buildCdnUrl(candidate.url, cdn.baseUrl)
+    : candidate.url
+
   const anchor = document.createElement('a')
-  anchor.href = candidate.url
+  anchor.href = href
   anchor.download = candidate.fileName
   anchor.rel = 'noopener noreferrer'
   document.body.appendChild(anchor)
@@ -239,14 +262,18 @@ export function triggerBrowserFileDownload(candidate: FirmwareCandidate): void {
   anchor.remove()
 }
 
-export function triggerBrowserFileDownloadFromApi(candidate: FirmwareCandidate): void {
+export function triggerBrowserFileDownloadFromApi(candidate: FirmwareCandidate, cdn?: CdnMirrorConfig): void {
   if (!candidate.githubAssetApiUrl) {
-    triggerBrowserFileDownload(candidate)
+    triggerBrowserFileDownload(candidate, cdn)
     return
   }
 
+  const href = (cdn?.enabled && cdn?.baseUrl)
+    ? buildCdnUrl(candidate.githubAssetApiUrl, cdn.baseUrl)
+    : candidate.githubAssetApiUrl
+
   const anchor = document.createElement('a')
-  anchor.href = candidate.githubAssetApiUrl
+  anchor.href = href
   anchor.rel = 'noopener noreferrer'
   document.body.appendChild(anchor)
   anchor.click()

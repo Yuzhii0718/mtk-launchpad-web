@@ -33,6 +33,8 @@ export const DEFAULT_BL2_RELEASE_API =
 export const DEFAULT_FIP_RELEASE_API =
   'https://api.github.com/repos/Yuzhii0718/bl-mt798x-dhcpd/releases/tags/2026.07.15-1318-all'
 
+export const DEFAULT_CDN_MIRROR_URL = 'https://gh-proxy.com/'
+
 export const GITHUB_BOOTLOADER_URL = 'https://github.com/Yuzhii0718/bl-mt798x-dhcpd'
 export const GITHUB_PROJECT_URL = 'https://github.com/Yuzhii0718/mtk-launchpad'
 export const EEPROM_TOOL_URL = 'https://yuzhii0718.eu.org/html/application/mt798x_eeprom/index.html'

@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   DEFAULT_BL2_RELEASE_API,
+  DEFAULT_CDN_MIRROR_URL,
   DEFAULT_FIP_RELEASE_API,
 } from '../constants'
 import { BUILTIN_BL2_CANDIDATES } from '../data/builtinRamboot'
 import type { Chip, DdrType, FirmwareCandidate, FirmwareSource, LogLevel } from '../types'
 import { candidateKey } from '../utils/fileNameParsers'
 import { compareMd5, computeMd5 } from '../utils/md5'
-import { fetchReleaseCandidates, triggerBrowserFileDownload } from '../utils/githubRelease'
+import { fetchReleaseCandidates, triggerBrowserFileDownload, type CdnMirrorConfig } from '../utils/githubRelease'
 import { resolveBl2Selection, resolveFipSelection } from '../utils/firmwareSelection'
 import { stringifyError } from '../utils/common'
 
@@ -37,6 +38,15 @@ export function useFirmwareFlow(input: UseFirmwareFlowParams) {
   const [fipReleaseCandidates, setFipReleaseCandidates] = useState<FirmwareCandidate[]>([])
   const [isLoadingFipRelease, setIsLoadingFipRelease] = useState(false)
   const [boardFilter, setBoardFilter] = useState('')
+  const [cdnMirrorUrl, setCdnMirrorUrl] = useState(DEFAULT_CDN_MIRROR_URL)
+  const [cdnMirrorEnabled, setCdnMirrorEnabled] = useState(false)
+
+  const cdnConfig = useMemo<CdnMirrorConfig | undefined>(() => {
+    if (!cdnMirrorEnabled || !cdnMirrorUrl.trim()) {
+      return undefined
+    }
+    return { enabled: true, baseUrl: cdnMirrorUrl.trim() }
+  }, [cdnMirrorEnabled, cdnMirrorUrl])
 
   const [selectedBuiltinBl2Key, setSelectedBuiltinBl2Key] = useState('')
   const [selectedReleaseBl2Key, setSelectedReleaseBl2Key] = useState('')
@@ -231,10 +241,12 @@ export function useFirmwareFlow(input: UseFirmwareFlowParams) {
       selectedReleaseBl2Key,
       uploadedBl2File,
       executionRemoteBl2Key: executionKeyOverride ?? executionRemoteBl2Key,
+      cdn: cdnConfig,
     })
   }, [
     bl2Source,
     builtinBl2Options,
+    cdnConfig,
     executionRemoteBl2Key,
     releaseBl2Options,
     selectedBuiltinBl2Key,
@@ -249,8 +261,9 @@ export function useFirmwareFlow(input: UseFirmwareFlowParams) {
       selectedReleaseFipKey,
       uploadedFipFile,
       executionRemoteFipKey: executionKeyOverride ?? executionRemoteFipKey,
+      cdn: cdnConfig,
     })
-  }, [executionRemoteFipKey, fipSource, releaseFipOptions, selectedReleaseFipKey, uploadedFipFile])
+  }, [cdnConfig, executionRemoteFipKey, fipSource, releaseFipOptions, selectedReleaseFipKey, uploadedFipFile])
 
   const runBl2Md5Check = useCallback(async (withLog: boolean): Promise<void> => {
     if (bl2Source === 'github-release' && !executionRemoteBl2Key) {
@@ -405,7 +418,7 @@ export function useFirmwareFlow(input: UseFirmwareFlowParams) {
       if (!selectedReleaseBl2Candidate) {
         throw new Error(getText('noSelectedBl2DownloadHint'))
       }
-      triggerBrowserFileDownload(selectedReleaseBl2Candidate)
+      triggerBrowserFileDownload(selectedReleaseBl2Candidate, cdnConfig)
       addLog('success', `BL2 ${selectedReleaseBl2Candidate.fileName} downloaded`)
     } catch (error) {
       addLog('error', stringifyError(error))
@@ -421,7 +434,7 @@ export function useFirmwareFlow(input: UseFirmwareFlowParams) {
       if (!matchedBoardBl2FromFipRelease) {
         throw new Error(getText('noMatchedBoardBl2'))
       }
-      triggerBrowserFileDownload(matchedBoardBl2FromFipRelease)
+      triggerBrowserFileDownload(matchedBoardBl2FromFipRelease, cdnConfig)
       addLog('success', `BL2 ${matchedBoardBl2FromFipRelease.fileName} downloaded`)
     } catch (error) {
       addLog('error', stringifyError(error))
@@ -437,7 +450,7 @@ export function useFirmwareFlow(input: UseFirmwareFlowParams) {
       if (!selectedReleaseFipCandidate) {
         throw new Error('FIP release file is not selected')
       }
-      triggerBrowserFileDownload(selectedReleaseFipCandidate)
+      triggerBrowserFileDownload(selectedReleaseFipCandidate, cdnConfig)
       addLog('success', `FIP ${selectedReleaseFipCandidate.fileName} downloaded`)
     } catch (error) {
       addLog('error', stringifyError(error))
@@ -500,6 +513,10 @@ export function useFirmwareFlow(input: UseFirmwareFlowParams) {
     isLoadingFipRelease,
     boardFilter,
     setBoardFilter,
+    cdnMirrorUrl,
+    setCdnMirrorUrl,
+    cdnMirrorEnabled,
+    setCdnMirrorEnabled,
     selectedBuiltinBl2Key,
     setSelectedBuiltinBl2Key,
     selectedReleaseBl2Key,

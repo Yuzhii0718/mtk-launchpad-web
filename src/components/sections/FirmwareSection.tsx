@@ -55,6 +55,10 @@ type FirmwareSectionProps = {
   onDownloadFip: () => Promise<void>
   onUploadedFipFileChange: (file: File | null) => void
   onRunFipMd5Check: () => Promise<void>
+  cdnMirrorUrl: string
+  onCdnMirrorUrlChange: (value: string) => void
+  cdnMirrorEnabled: boolean
+  onCdnMirrorEnabledChange: (value: boolean) => void
 }
 
 function Bl2Panel(props: FirmwareSectionProps) {
@@ -347,7 +351,12 @@ function FipPanel(props: FirmwareSectionProps) {
 
 export function FirmwareSection(props: FirmwareSectionProps) {
   const { t } = useTranslation()
-  const { loadMode, onLoadModeChange } = props
+  const {
+    loadMode, onLoadModeChange,
+    bl2Source, fipSource,
+    cdnMirrorUrl, onCdnMirrorUrlChange,
+    cdnMirrorEnabled, onCdnMirrorEnabledChange,
+  } = props
 
   return (
     <section className="card">
@@ -381,6 +390,33 @@ export function FirmwareSection(props: FirmwareSectionProps) {
           </button>
         </div>
       </div>
+
+      {(bl2Source === 'github-release' || fipSource === 'github-release') && (
+        <div className="cdn-mirror-section" style={{ marginBottom: '16px', padding: '12px', border: `1px solid var(--border2)`, borderRadius: 'var(--radius-sm)', background: 'var(--surface2)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <label className="toggle-wrapper">
+              <input
+                type="checkbox"
+                checked={cdnMirrorEnabled}
+                onChange={(e) => onCdnMirrorEnabledChange(e.target.checked)}
+              />
+              <span className="toggle-label">{t('cdnMirrorToggle')}</span>
+            </label>
+          </div>
+          {cdnMirrorEnabled && (
+            <div className="form-group" style={{ marginTop: '10px' }}>
+              <label>{t('cdnMirrorUrl')}</label>
+              <input
+                type="text"
+                className="release-api-input"
+                value={cdnMirrorUrl}
+                onChange={(e) => onCdnMirrorUrlChange(e.target.value)}
+                placeholder={t('cdnMirrorPlaceholder')}
+              />
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="form-grid-2" style={{ gap: '24px' }}>
         <div style={{ borderRight: loadMode === 'bl2-fip' ? '1px solid var(--border)' : 'none', paddingRight: loadMode === 'bl2-fip' ? '24px' : '0' }}>
